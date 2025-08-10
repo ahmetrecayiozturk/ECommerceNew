@@ -7,31 +7,22 @@ import jakarta.validation.Valid;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import com.ecommerce.userservice.application.UserApplicationService;
-import com.ecommerce.userservice.domain.model.User;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 @RestController
 @RequestMapping("/api/users")
 public class UserController {
 
-    private final UserApplicationService userService;
     private final UserApplicationService userApplicationService;
 
-    public UserController(UserApplicationService userService, UserApplicationService userApplicationService) {
-        this.userService = userService;
+    public UserController(UserApplicationService userApplicationService) {
         this.userApplicationService = userApplicationService;
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@Valid @RequestBody UserCreateRequest userCreateRequest){
-        User user = new User();
-        user.setFirstName(userCreateRequest.getFirstName());
-        user.setLastName(userCreateRequest.getLastName());
-        user.setEmail(userCreateRequest.getEmail());
-        user.setPassword(userCreateRequest.getPassword()); // Password should be encoded in the service layer
+    public ResponseEntity<String> registerUser(@Valid @RequestBody RegisterReqıest registerReqıest){
         try {
-            userService.registerUser(user.getFirstName(), user.getLastName(), user.getEmail(), user.getPassword());
+            userApplicationService.registerUser(registerReqıest.getFirstName(), registerReqıest.getLastName(), registerReqıest.getEmail(), registerReqıest.getPassword(), registerReqıest.getRole());
             return ResponseEntity.ok("User registered successfully.");
         } catch (Exception e) {
             return ResponseEntity.status(400).body("Error registering user: " + e.getMessage());
@@ -41,7 +32,7 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest){
         try {
-            String token = userService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
+            String token = userApplicationService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
             return ResponseEntity.ok(java.util.Map.of("token", token));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(java.util.Map.of("error", "Error logging in user: " + e.getMessage()));

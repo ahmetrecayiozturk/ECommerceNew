@@ -39,7 +39,7 @@ public class UserApplicationService {
     }
 
     @Transactional
-    public void registerUser(String firstName, String lastName, String email, String password) throws IOException {
+    public void registerUser(String firstName, String lastName, String email, String password, String role) throws IOException {
         boolean isUserExist = existsUser(email);
         if (isUserExist) {
             throw new IllegalArgumentException("User with this email already exists.");
@@ -49,6 +49,7 @@ public class UserApplicationService {
             user.setLastName(lastName);
             user.setEmail(email);
             user.setPassword(passwordEncoder.encode(password)); // Şifre hashli!
+            user.setRole(Role.valueOf(role));
             userRepository.save(user);
             UserCreatedEvent userCreatedEvent = new UserCreatedEvent();
             userCreatedEvent.setUserId(user.getId());

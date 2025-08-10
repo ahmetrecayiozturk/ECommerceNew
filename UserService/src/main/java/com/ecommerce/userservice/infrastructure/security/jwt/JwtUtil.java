@@ -3,6 +3,7 @@ package com.ecommerce.userservice.infrastructure.security.jwt;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
@@ -11,10 +12,10 @@ import java.util.Date;
 @Component
 public class JwtUtil {
 
-
-    private final String my_secret_key = "thisismysecretkeyanditshouldbeverylonganditshouldnotbehardcoded";
-
-    private final long myExpirationTime = 3600000; // 1 hour in milliseconds
+    @Value("${my_secret_key}")
+    private String my_secret_key;
+    @Value("${myExpirationTime}")
+    private long myExpirationTime;
 
     public String generateToken(String email){
         return Jwts.builder()
@@ -49,9 +50,9 @@ public class JwtUtil {
     public String getTokenFromHeader(HttpServletRequest request){
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            String token = authHeader.substring(7); // "Bearer " kısmını atlayarak token'ı döndür
+            String token = authHeader.substring(7);
             return token;
         }
-        return null; // Eğer header yoksa veya format yanlışsa null döndür
+        return null;
     }
 }
