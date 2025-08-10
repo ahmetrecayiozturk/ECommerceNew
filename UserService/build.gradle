@@ -30,39 +30,44 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
-	testImplementation 'org.springframework.session:spring-session-test'
+	testImplementation 'org.springframework.session:spring-session-test:5.1.0'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 
 	// This dependency is used by the application.
 	//implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'com.microsoft.sqlserver:mssql-jdbc:6.1.0.jre7'
+
+	// JSON Web Token dependencies
 	implementation 'io.jsonwebtoken:jjwt-api:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	implementation 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+	// JAXB dependencies
 	implementation 'javax.xml.bind:jaxb-api:2.3.1'
 	implementation 'org.glassfish.jaxb:jaxb-runtime:2.3.1'
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	// WebSocket and Kafka
 	implementation 'org.springframework.boot:spring-boot-starter-websocket'
-	// REMOVED: implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.kafka:spring-kafka'
+
+	// JPA and Database drivers
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	runtimeOnly 'org.postgresql:postgresql'
+	runtimeOnly 'com.microsoft.sqlserver:mssql-jdbc:6.1.0.jre7'
+
+	// Spring Security
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 
 	// Lombok
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 
-	// PostgreSQL JDBC sürücüsü
-	runtimeOnly 'org.postgresql:postgresql'
-
 	// JPA API
 	implementation 'javax.persistence:javax.persistence-api:2.2'
 
-	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.kafka:spring-kafka-test'
-	//testImplementation 'org.springframework.security:spring-security-test'
+
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
