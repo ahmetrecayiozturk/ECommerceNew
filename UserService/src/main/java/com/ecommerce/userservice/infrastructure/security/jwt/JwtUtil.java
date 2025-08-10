@@ -17,10 +17,11 @@ public class JwtUtil {
     @Value("${myExpirationTime}")
     private long myExpirationTime;
 
-    public String generateToken(String email){
+    public String generateToken(String email,String role){
         return Jwts.builder()
                 .setSubject(email)
                 .setIssuedAt(new Date(System.currentTimeMillis()))
+                .claim("role", role) // <-- claim ismi "role" olmalı
                 .setExpiration(new Date(System.currentTimeMillis() + myExpirationTime))
                 .signWith(SignatureAlgorithm.HS256, my_secret_key)
                 .compact();
@@ -54,5 +55,12 @@ public class JwtUtil {
             return token;
         }
         return null;
+    }
+    public String extractRole(String token){
+        return Jwts.parser()
+                .setSigningKey(my_secret_key)
+                .parseClaimsJws(token)
+                .getBody()
+                .get("role", String.class);
     }
 }

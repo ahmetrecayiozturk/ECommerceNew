@@ -6,6 +6,7 @@
     import jakarta.servlet.http.HttpServletRequest;
     import jakarta.servlet.http.HttpServletResponse;
     import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+    import org.springframework.security.core.authority.SimpleGrantedAuthority;
     import org.springframework.security.core.context.SecurityContextHolder;
     import org.springframework.security.core.userdetails.UserDetails;
     import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
@@ -13,6 +14,7 @@
     import org.springframework.web.filter.OncePerRequestFilter;
 
     import java.io.IOException;
+    import java.util.List;
 
     @Component
     public class JwtFilter extends OncePerRequestFilter{
@@ -48,10 +50,13 @@
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
                 // token validasyonunu yapalım
                 if(jwtUtil.validateToken(token,userDetails)){
-                    // Eğer token geçerliyse, SecurityContext'e userDetails'i ekleyelim
+                    // JWT'den rolü oku, authority olarak ekle
+                    String role = jwtUtil.extractRole(token); // Örn: "USER" veya "ADMIN"
+                    List<SimpleGrantedAuthority> authorities =
+                            (role != null) ? List.of(new SimpleGrantedAuthority("ROLE_" + role)) : (List<SimpleGrantedAuthority>) userDetails.getAuthorities();
+
                     UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                            userDetails, null, userDetails.getAuthorities());
-                    //authToken.setDetails(userDetails);
+                            userDetails, null, authorities); // <-- burada authorities veriyoruz!
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }

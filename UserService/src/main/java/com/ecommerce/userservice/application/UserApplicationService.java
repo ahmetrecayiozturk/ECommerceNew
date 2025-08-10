@@ -3,7 +3,6 @@ package com.ecommerce.userservice.application;
 
 import com.ecommerce.userservice.domain.model.Role;
 import com.ecommerce.userservice.domain.model.User;
-import com.ecommerce.userservice.domain.service.UserDomainService;
 import com.ecommerce.userservice.infrastructure.events.UserCreatedEvent;
 import com.ecommerce.userservice.infrastructure.repository.UserRepository;
 import com.ecommerce.userservice.infrastructure.security.jwt.JwtUtil;
@@ -29,15 +28,14 @@ public class UserApplicationService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final UserDomainService userDomainService;
-    public UserApplicationService(ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtUtil jwtUtil, UserDomainService userDomainService) {
+
+    public UserApplicationService(ObjectMapper objectMapper, KafkaTemplate<String, String> kafkaTemplate, UserRepository userRepository, PasswordEncoder passwordEncoder, AuthenticationManager authenticationManager, JwtUtil jwtUtil) {
         this.objectMapper = objectMapper;
         this.kafkaTemplate = kafkaTemplate;
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
-        this.userDomainService = userDomainService;
     }
 
     @Transactional
@@ -46,28 +44,23 @@ public class UserApplicationService {
         if (isUserExist) {
             throw new IllegalArgumentException("User with this email already exists.");
         } else {
-            if(userDomainService.isValidEmail(email)) {
-                User user = new User();
-                user.setFirstName(firstName);
-                user.setLastName(lastName);
-                user.setEmail(email);
-                user.setPassword(passwordEncoder.encode(password)); // Şifre hashli!
-                user.setRole(Role.valueOf(role));
-                userRepository.save(user);
-                UserCreatedEvent userCreatedEvent = new UserCreatedEvent();
-                userCreatedEvent.setUserId(user.getId());
-                userCreatedEvent.setFirstName(user.getFirstName());
-                userCreatedEvent.setLastName(user.getLastName());
-                userCreatedEvent.setEmail(user.getEmail());
-                userCreatedEvent.setRole(user.getRole().name());
-                userCreatedEvent.setCreatedAt(user.getCreatedAt());
-                String payload = objectMapper.writeValueAsString(userCreatedEvent);
-                kafkaTemplate.send("user-created-topic", payload);
-                System.out.println("User registered and event sent to Kafka: " + payload);
-            }
-           else {
-                throw new IllegalArgumentException("Invalid email format.");
-            }
+            User user = new User();
+            user.setFirstName(firstName);
+            user.setLastName(lastName);
+            user.setEmail(email);
+            user.setPassword(passwordEncoder.encode(password)); // Şifre hashli!
+            user.setRole(Role.valueOf(role));
+            userRepository.save(user);
+            UserCreatedEvent userCreatedEvent = new UserCreatedEvent();
+            userCreatedEvent.setUserId(user.getId());
+            userCreatedEvent.setFirstName(user.getFirstName());
+            userCreatedEvent.setLastName(user.getLastName());
+            userCreatedEvent.setEmail(user.getEmail());
+            userCreatedEvent.setRole(user.getRole().name());
+            userCreatedEvent.setCreatedAt(user.getCreatedAt());
+            String payload = objectMapper.writeValueAsString(userCreatedEvent);
+            kafkaTemplate.send("user-created-topic", payload);
+            System.out.println("User registered and event sent to Kafka: " + payload);
         }
     }
 
@@ -79,7 +72,7 @@ public class UserApplicationService {
             }
             Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(email, password));
             if(authentication.isAuthenticated()){
-                String token = jwtUtil.generateToken(email);
+                String token = jwtUtil.generateToken(email, user.getRole().name());
                 return token;
             }
             else{
