@@ -1,0 +1,15 @@
+package com.ecommerce.orderservice.domain.events;
+
+import lombok.Data;
+
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
+@Data
+public class PaymentEvent {
+    private Long orderId;
+    private Long userId;
+    private String status;
+    private boolean success;
+    private ZonedDateTime createdAt = ZonedDateTime.now(ZoneId.of("Europe/Istanbul"));
+}
