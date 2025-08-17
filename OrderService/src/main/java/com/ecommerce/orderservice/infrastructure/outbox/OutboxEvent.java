@@ -15,6 +15,7 @@ public class OutboxEvent {
     private Long orderId;
     private Long productId;
     private Long userId;
+    private int quantity;
     private String aggregateType;
     private String eventType;
     @Column(columnDefinition = "TEXT")

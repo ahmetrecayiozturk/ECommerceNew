@@ -2,6 +2,7 @@ package com.ecommerce.orderservice.application.service;
 
 import com.ecommerce.orderservice.application.ProductSnapshotProvider;
 import com.ecommerce.orderservice.domain.aggregate.Order;
+import com.ecommerce.orderservice.domain.events.CompensationEvent;
 import com.ecommerce.orderservice.infrastructure.repository.OrderRepository;
 import com.ecommerce.orderservice.domain.snapshout.ProductSnapshot;
 import com.ecommerce.orderservice.domain.value.OrderStatus;
@@ -9,6 +10,7 @@ import com.ecommerce.orderservice.infrastructure.outbox.OutboxEvent;
 import com.ecommerce.orderservice.infrastructure.outbox.OutboxRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,6 +52,7 @@ public class OrderService {
         outboxEvent.setOrderId(savedOrder.getId());
         outboxEvent.setUserId(userId);
         outboxEvent.setProductId(productId);
+        outboxEvent.setQuantity(quantity);
         outboxEvent.setAggregateType("Order");
         outboxEvent.setEventType("order-created");
         outboxEvent.setPublished(false);
@@ -63,5 +66,27 @@ public class OrderService {
         outboxEvent.setTimestamp(ZonedDateTime.now(ZoneId.of("UTC")));
         //outbox eventinin kaydedilmesi
         outboxRepository.save(outboxEvent);
+    }
+
+    @KafkaListener(topics="compensation-commands", groupId = "order-service")
+    @Transactional
+    public void handleCompensationCommand(String payload){
+        try{
+            CompensationEvent compensationEvent = objectMapper.readValue(payload, CompensationEvent.class);
+            Order order = orderRepository.findById(compensationEvent.getOrderId()).orElse(null);
+            if(order == null){
+                System.out.println("Order not found for orderId: " + compensationEvent.getOrderId() + " (Probably already compensated!)");
+                return;
+            }
+            if(order.getStatus() == OrderStatus.CANCELLED){
+                System.out.println("Order already cancelled for orderId: " + order.getId());
+                return;
+            }
+            order.setStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+            System.out.println("Order cancelled for orderId: " + order.getId());
+        } catch(Exception e){
+            throw new RuntimeException("Order compensation failed: " + e.getMessage(), e);
+        }
     }
 }

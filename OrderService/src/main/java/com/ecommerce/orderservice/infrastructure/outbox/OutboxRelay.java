@@ -18,6 +18,13 @@ public class OutboxRelay {
         this.objectMapper = objectMapper;
     }
 
+    //burada outbox event mantığını kullandım, bu transactional işlemlerde eventler eğer method transactional olduğundan db'ye commit etmez rollback yaparsa bile yayınlanır
+    //bu da atıyorum ordereventini yayınlayacaksın ordercreate olunca ma db ye commit olmadı hata çıktı transactional olarak işlendiği için createOrder methodu rollback oldu
+    //ve order oluşmadı ama event yine de yayınlandı, bu da aslında saçma ve yanlış bir duruma çıkar çükü order oluşmadı ama order oluştu eventi fırlatıldı kafka ile,
+    //işte bunu engellemek için outbox patternini kullanıyoruz, bu eventleri bir outbox_events tablosuna kaydetmemizi sağlıyor, böylece biz eventleri aslında db'ye commit ediyoruz
+    //ve eğer örneğimizden devam edersek, order oluşmazda db'ye commit edilmeyecek ve rollback olarak, aynı şekilde ordereventimiz de outbox_events tablomuza kaydolmayıp rollback
+    //olacak, ve bu aşşağıdaki method gibi bir method ile scheculed olarka 5 saniyede 3 saniyede bir isPublished'i false olan tüm eventleri otubox_events tablomuzdan alıp yayınlıyoruz
+    //yani burası bu işe yarıyor
     @Scheduled(fixedDelay = 5000)
     private void publishOutboxEvents(){
         System.out.println("Publishing outbox events...");
