@@ -6,17 +6,16 @@ import lombok.Data;
 
 @Data
 public class OrderEvent {
-    private Long id;
+    @JsonAlias({"id"})
     private Long orderId;
     private Long userId;
+    private Long productId;
     private int quantity;
-    private ProductSnapshot productSnapshot; // <-- Bunu ekle!
+    private ProductSnapshot productSnapshot; // yeni alan
 
-    public Long getOrderId() {
-        return orderId != null ? orderId : id;
-    }
     public Long getProductId() {
-        // Hem productId doğrudan varsa onu, yoksa productSnapshot içinden al
-        return productSnapshot != null ? productSnapshot.getProductId() : null;
+        if (productId != null) return productId;
+        if (productSnapshot != null && productSnapshot.getProductId() != null) return productSnapshot.getProductId();
+        return null;
     }
 }

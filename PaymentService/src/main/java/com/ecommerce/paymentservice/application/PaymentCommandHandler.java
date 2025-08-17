@@ -1,6 +1,7 @@
 package com.ecommerce.paymentservice.application;
 
 import com.ecommerce.paymentservice.domain.aggregate.Payment;
+import com.ecommerce.paymentservice.domain.events.CompensationEvent;
 import com.ecommerce.paymentservice.domain.events.PaymentEvent;
 import com.ecommerce.paymentservice.domain.model.Status;
 import com.ecommerce.paymentservice.domain.events.OrderEvent;
@@ -98,6 +99,32 @@ public class PaymentCommandHandler {
         }
         catch(Exception e){
             throw new RuntimeException("Error handling payment command: " + e.getMessage(), e);
+        }
+    }
+    @KafkaListener(topics = "compensation-commands", groupId = "payment-service")
+    public void handleCompensationCommand(String payload){
+        try{
+            //gidip compensation eventini bulalım payload ile sonra da içindekii orderId ile gidip payment'i bulalım sonra da paymenti geri alalım iade yapalım yani
+            CompensationEvent compensationEvent = objectMapper.readValue(payload, CompensationEvent.class);
+            //Şimdi de paymenti bulalım
+            Payment payment = paymentRepository.findByOrderId(compensationEvent.getOrderId()).orElseThrow(
+                    ()-> new RuntimeException("Payment not found for orderId: " + compensationEvent.getOrderId())
+            );
+            if(payment.getStatus() == Status.REFUNDED) {
+                System.out.println("Payment already refunded for orderId: " + payment.getOrderId());
+                return;
+            }
+            if(payment.getSuccess() == false){
+                System.out.println("Payment already failed for orderId: " + payment.getOrderId() + ", no need to refund.");
+                return;
+            }
+            payment.setStatus(Status.REFUNDED);
+            payment.setSuccess(false);
+            paymentRepository.save(payment);
+            System.out.println("Payment refunded for orderId: " + payment.getOrderId());
+        }
+        catch (Exception e){
+            throw new RuntimeException("Error handling compensation command: " + e.getMessage(), e);
         }
     }
 }
