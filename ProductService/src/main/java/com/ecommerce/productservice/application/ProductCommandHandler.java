@@ -1,8 +1,8 @@
 package com.ecommerce.productservice.application;
 
 import com.ecommerce.productservice.domain.aggregate.Product;
+import com.ecommerce.productservice.domain.events.CompensationEvent;
 import com.ecommerce.productservice.domain.events.PaymentEvent;
-import com.ecommerce.productservice.domain.events.PaymentEventEnvelope;
 import com.ecommerce.productservice.infrastructure.outbox.OutboxEvent;
 import com.ecommerce.productservice.infrastructure.outbox.OutboxRepository;
 import com.ecommerce.productservice.infrastructure.repository.ProductRepository;
@@ -73,6 +73,30 @@ public class ProductCommandHandler {
         {
             throw new RuntimeException(e);
         }
+    }
+    @KafkaListener(topics="compensation-commands", groupId = "product-service")
+    public void handleCompensationCommand(String payload){
+        try{
+            //önce compensatyion eventini bulalım payload ile sonra da içindekii orderId ile gidip product'u bulup o kadar arttıralım ama order'ımız yok, yani compensation işleminde
+            //quantity belirtmek lazım, ayrıca productId de olabilir, boş şeyi oluştururuz o an nerede hata çıkmışsa zaten eksik kısımları sorun olmaz, çünkü oraları kullanmayız
+            System.out.println("handleCompensationCommand called! Payload: " + payload);
+            //Şimdi eventi bulduk, burdaki orderId ve quantity alanlarını kullanarak db'mize gerekli işlemleri commit edelim
+            CompensationEvent compensationEvent = objectMapper.readValue(payload, CompensationEvent.class);
+            //Product'un bulunması productId ile
+            Product product = productRepository.findById(compensationEvent.getProductId()).orElse(null);
+            if(product == null){
+                System.out.println("Product not found for productId: " + compensationEvent.getProductId() + " (Probably already compensated!)");
+            }
+            else{
+                product.setStockQuantity((int) (product.getStockQuantity() + compensationEvent.getQuantity()));
+                System.out.println("Product stock quantity updated: " + product.getStockQuantity() + " for productId: " + compensationEvent.getProductId());
+                productRepository.save(product);
+            }
+        }
+        catch (Exception e){
+            throw new RuntimeException("Compensation command handling failed: " + e.getMessage(), e);
+        }
+
     }
 
 }
