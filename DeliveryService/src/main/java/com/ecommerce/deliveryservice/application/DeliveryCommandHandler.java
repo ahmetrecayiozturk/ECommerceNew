@@ -1,6 +1,7 @@
 package com.ecommerce.deliveryservice.application;
 
 import com.ecommerce.deliveryservice.domain.aggregate.Delivery;
+import com.ecommerce.deliveryservice.domain.events.CompensationEvent;
 import com.ecommerce.deliveryservice.domain.events.DeliveryEvent;
 import com.ecommerce.deliveryservice.domain.model.Status;
 import com.ecommerce.deliveryservice.domain.events.ProductEvent;
@@ -80,14 +81,41 @@ public class DeliveryCommandHandler {
                     deliveryEvent.getUserId(),
                     "DELIVER",
                     "DELIVERY_EVENT",
+                    deliveryEvent.isSuccess(),
                     payloadToOutbox,
                     String.valueOf(deliveryEvent.getStatus())
                     );
+            System.out.println("OutboxEvent: " + outboxEvent);
             //Şimdi de bunu repoya kaydedelim
             outboxRepository.save(outboxEvent);
         }
         catch(Exception e){
             throw new RuntimeException("Error handling payment command: " + e.getMessage(), e);
+        }
+    }
+    //Şimdi de companse eventi handle edelim ve deliveryi nesnesi ile delivery event nesnesini güncelleyelim
+    @KafkaListener(topics = "compensation-commands", groupId = "delivery-service")
+    public void compensaDelivery (String payload){
+        try{
+            System.out.println("DeliveryCommandHandler: handleCompanationCommand");
+            CompensationEvent compensationEvent = objectMapper.readValue(payload, CompensationEvent.class);
+            Delivery delivery = deliveryRepository.findByOrderId(compensationEvent.getOrderId())
+                    .orElse(null); // <--- burada orElse(null) yapıyoruz!
+            if(delivery == null){
+                System.out.println("Delivery not found for orderId: " + compensationEvent.getOrderId() + " (Probably already compensated or never created!)");
+                return;
+            }
+            if(delivery.getStatus() == Status.valueOf("CANCELLED")) {
+                System.out.println("Delivery already canceled for orderId: " + delivery.getOrderId());
+                return;
+            }
+            delivery.setSuccess(false);
+            delivery.setStatus(Status.valueOf("CANCELLED"));
+            deliveryRepository.save(delivery);
+            System.out.println("Delivery canceled for orderId: " + delivery.getOrderId());
+        }
+        catch(Exception e){
+            throw new RuntimeException("Error handling compensation command: " + e.getMessage(), e);
         }
     }
 }

@@ -16,15 +16,17 @@ public class OutboxEvent {
     private Long userId;
     private String aggregateType;
     private String eventType;
+    private boolean success;
     private String payload;
     private ZonedDateTime timestamp;
     private boolean published = false;
     private String paymentStatus; // e.g., "PENDING", "COMPLETED", "FAILED"
-    public OutboxEvent(Long orderId, Long userId, String aggregateType, String eventType, String payload, String paymentStatus) {
+    public OutboxEvent(Long orderId, Long userId, String aggregateType, String eventType, boolean success, String payload, String paymentStatus) {
         this.orderId = orderId;
         this.userId = userId;
         this.aggregateType = aggregateType;
         this.eventType = eventType;
+        this.success = success;
         this.payload = payload;
         this.timestamp = ZonedDateTime.now();
         this.paymentStatus = paymentStatus;
