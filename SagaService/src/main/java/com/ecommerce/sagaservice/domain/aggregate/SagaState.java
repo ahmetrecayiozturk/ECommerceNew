@@ -11,10 +11,14 @@ public class SagaState {
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
     private Long id;
     private Long orderId;
+    private Long userId;
+    private Long productId;
+    private int quantity;
     private String currentStep;
-    private String status; // IN_PROGRESS, SUCCEEDED, FAILED, COMPENSATING
+    private String status;
+    //payload uzun olunca böyle yaptım 255'i geçse de sorun olmuyor
     @Column(columnDefinition = "TEXT")
-    private String payload; // Uzun event JSON'u için
+    private String payload;
     public SagaState() {}
 
     public SagaState(Long orderId, String currentStep, String status) {
