@@ -5,6 +5,7 @@ import com.ecommerce.productservice.domain.aggregate.Product;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.core.env.Environment;
 
 import java.io.IOException;
 import java.util.List;
@@ -14,9 +15,11 @@ import java.util.List;
 public class ProductController {
 
     private final ProductApplicationService productApplicationService;
+    private final Environment environment;
 
-    public ProductController(ProductApplicationService productApplicationService) {
+    public ProductController(ProductApplicationService productApplicationService, Environment environment) {
         this.productApplicationService = productApplicationService;
+        this.environment = environment;
     }
 
     @PostMapping("/add")
@@ -46,4 +49,11 @@ public class ProductController {
         }
     }
 
+    @PostMapping("/health-check")
+    public ResponseEntity<String> healthCheck() {
+        String port = environment.getProperty("local.server.port");
+        String msg = "Product Service is up and running on port: " + port;
+        System.out.println(msg);
+        return ResponseEntity.ok(msg);
+    }
 }

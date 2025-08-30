@@ -2,6 +2,7 @@ package com.ecommerce.deliveryservice.api;
 
 import com.ecommerce.deliveryservice.application.DeliveryApplicationService;
 import com.ecommerce.deliveryservice.domain.aggregate.Delivery;
+import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -15,8 +16,11 @@ public class DeliveryController {
 
     private final DeliveryApplicationService deliveryApplicationService;
 
-    public DeliveryController(DeliveryApplicationService deliveryApplicationService) {
+    private final Environment environment;
+
+    public DeliveryController(DeliveryApplicationService deliveryApplicationService, Environment environment) {
         this.deliveryApplicationService = deliveryApplicationService;
+        this.environment = environment;
     }
 
     @PostMapping("/add")
@@ -30,8 +34,14 @@ public class DeliveryController {
     public ResponseEntity<List<Delivery>> getAllProducts() {
         return ResponseEntity.ok((List<Delivery>) deliveryApplicationService.getAllDelivery());
     }
+    @PostMapping("/health-check")
+    public ResponseEntity<String> healthCheck() {
+        String port = environment.getProperty("local.server.port");
+        String msg = "Delivery Service is up and running on port: " + port;
+        System.out.println(msg);
+        return ResponseEntity.ok(msg);
+    }
 }
-
     /*
     @PostMapping("/update/{id}")
     public ResponseEntity<String> updateProduct(@RequestBody PaymentUpdateRequest paymentUpdateRequest) throws IOException {

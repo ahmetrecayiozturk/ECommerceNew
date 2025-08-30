@@ -4,19 +4,23 @@ import com.ecommerce.userservice.application.UserApplicationService;
 import com.ecommerce.userservice.domain.model.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.core.env.Environment;
 import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.core.env.Environment;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/api/user")
 public class UserController {
 
     private final UserApplicationService userApplicationService;
+    private final Environment env;
 
-    public UserController(UserApplicationService userApplicationService) {
+    public UserController(UserApplicationService userApplicationService, Environment env) {
         this.userApplicationService = userApplicationService;
+        this.env = env;
     }
 
     @PostMapping("/register")
@@ -51,6 +55,14 @@ public class UserController {
         else{
             return ResponseEntity.ok("You are NOT a User!");
         }
+    }
+
+    @PostMapping("/health-check")
+    public ResponseEntity<String> healthCheck(){
+        String port = env.getProperty("server.port");
+        String msg = "User Service is up and running on port: " + port;
+        System.out.println(msg);
+        return ResponseEntity.ok(msg);
     }
 
     @GetMapping("/user-role-test")

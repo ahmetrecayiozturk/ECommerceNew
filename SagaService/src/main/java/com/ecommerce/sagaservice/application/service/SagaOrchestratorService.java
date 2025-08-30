@@ -82,6 +82,7 @@ public class SagaOrchestratorService {
     //product eventini yakalayan bu method eğer product rezervasyonu başarılı ise bir sonraki adım için product commands yayınlayacak, bunu alan product service delivery eventsi yayınlayacak
     @KafkaListener(topics = "product-events", groupId = "saga-orchestrator")
     public void handleProductEvent(String payload){
+        System.out.println( "handleProductEvent çalıştı");
         try{
             System.out.println("Received product event: " + payload);
             //önce eventi bulalım ve deserialize edelim

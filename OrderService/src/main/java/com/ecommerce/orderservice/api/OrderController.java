@@ -4,19 +4,22 @@ import com.ecommerce.orderservice.application.service.OrderService;
 import com.ecommerce.orderservice.infrastructure.outbox.OutboxEvent;
 import com.ecommerce.orderservice.infrastructure.outbox.OutboxRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.core.env.Environment;
+
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/orders")
+@RequestMapping("/api/order")
 public class OrderController {
     private final OrderService orderService;
-
-    public OrderController(OrderService orderService, OutboxRepository outboxRepository) {
+    private final Environment environment;
+    public OrderController(OrderService orderService, OutboxRepository outboxRepository, Environment environment) {
         this.orderService = orderService;
 
+        this.environment = environment;
     }
 
     @PostMapping("/create")
@@ -31,6 +34,13 @@ public class OrderController {
         catch(Exception e){
             return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
         }
+    }
+    @PostMapping("/health-check")
+    public ResponseEntity<String> healthCheck() {
+        String port = environment.getProperty("local.server.port");
+        String msg = "Order Service is up and running on port: " + port;
+        System.out.println(msg);
+        return ResponseEntity.ok(msg);
     }
 
 }
