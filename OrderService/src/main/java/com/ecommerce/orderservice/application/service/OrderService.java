@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Service
 public class OrderService {
@@ -66,6 +67,11 @@ public class OrderService {
         outboxEvent.setTimestamp(ZonedDateTime.now(ZoneId.of("UTC")));
         //outbox eventinin kaydedilmesi
         outboxRepository.save(outboxEvent);
+    }
+
+    public List<Order> getAllOrders( ){
+        List<Order> orders = orderRepository.findAll();
+        return orders;
     }
 
     @KafkaListener(topics="compensation-commands", groupId = "order-service")

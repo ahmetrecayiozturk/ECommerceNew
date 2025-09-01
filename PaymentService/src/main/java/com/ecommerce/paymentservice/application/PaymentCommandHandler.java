@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.util.Optional;
 
 @Service
 public class PaymentCommandHandler {
@@ -31,39 +32,31 @@ public class PaymentCommandHandler {
         this.objectMapper = objectMapper;
         this.paymentApplicationService = paymentApplicationService;
     }
-    @KafkaListener(topics = "payment-commands", groupId = "payment-service")
-    public void handlePaymentCommand(String payload){
-        try{
-            OutboxEvent outboxEventTemp = objectMapper.readValue(payload, OutboxEvent.class);
-            System.out.println("Gelen OutboxEvent: " + payload);
-            System.out.println("OutboxEvent payload alanı: " + outboxEventTemp.getPayload());
 
-            OrderEvent orderEvent = objectMapper.readValue(outboxEventTemp.getPayload(), OrderEvent.class);
+    @KafkaListener(topics = "payment-commands", groupId = "payment-service")
+    public void handlePaymentCommand(String payload) {
+        try {
+            OrderEvent orderEvent = objectMapper.readValue(payload, OrderEvent.class); // Doğru kullanım
             System.out.println("Çözümlenen OrderEvent: " + orderEvent);
 
-            if(orderEvent.getOrderId() == null) {
-                throw new RuntimeException("OrderEvent.orderId is NULL! Event: " + outboxEventTemp.getPayload());
+            if (orderEvent.getOrderId() == null) {
+                System.out.println("OrderEvent.orderId is NULL! Event: " + payload);
             }
-            if(orderEvent.getProductId() == null) {
-                throw new RuntimeException("OrderEvent.productId is NULL! Event: " + outboxEventTemp.getPayload());
+            if (orderEvent.getProductId() == null) {
+                System.out.println("OrderEvent.productId is NULL! Event: " + payload);
             }
 
-            //Şimdi de bu eventteki paymentId ile paymenti bulup onu güncelleyelim ya da yeni bir payment oluşturalım
-            Payment payment = paymentRepository.findById(orderEvent.getOrderId()).orElseGet(
-                () -> {
-                    Payment newPayment = new Payment();
-                    newPayment.setOrderId(orderEvent.getOrderId());
-                    newPayment.setUserId(orderEvent.getUserId());
-                    newPayment.setProductId(orderEvent.getProductId());
-                    newPayment.setSuccess(false);
-                    newPayment.setStatus(Status.valueOf("PENDING"));
-                    newPayment.setCreatedAt(ZonedDateTime.now(ZoneId.of("Europe/Istanbul")));
-                    return paymentRepository.save(newPayment);
-                }
-            );
+            Payment payment = paymentRepository.findByOrderId(orderEvent.getOrderId()).orElse(null);
+
+            if (payment == null) {
+                System.out.println("Payment bulunamadı, event publish edilmeyecek. OrderId: " + orderEvent.getOrderId());
+                return;
+            }
+
             //Şimdi de bunu ödeme işlemini simüle ettiğimiz bir methodi ile işleyelim
             boolean isPaid = paymentApplicationService.processPayment(payment);
-            if(isPaid){
+
+            if (isPaid) {
                 payment.setSuccess(true);
                 payment.setStatus(Status.valueOf("COMPLETED"));
                 paymentRepository.save(payment);
@@ -93,28 +86,28 @@ public class PaymentCommandHandler {
                     "PAYMENT_EVENT",
                     payloadToOutbox,
                     String.valueOf(paymentEvent.getStatus())
-                    );
+            );
             //Şimdi de bunu repoya kaydedelim
             outboxRepository.save(outboxEvent);
-        }
-        catch(Exception e){
+        } catch (Exception e) {
             throw new RuntimeException("Error handling payment command: " + e.getMessage(), e);
         }
     }
+
     @KafkaListener(topics = "compensation-commands", groupId = "payment-service")
-    public void handleCompensationCommand(String payload){
-        try{
+    public void handleCompensationCommand(String payload) {
+        try {
             //gidip compensation eventini bulalım payload ile sonra da içindekii orderId ile gidip payment'i bulalım sonra da paymenti geri alalım iade yapalım yani
             CompensationEvent compensationEvent = objectMapper.readValue(payload, CompensationEvent.class);
             //Şimdi de paymenti bulalım
             Payment payment = paymentRepository.findByOrderId(compensationEvent.getOrderId()).orElseThrow(
-                    ()-> new RuntimeException("Payment not found for orderId: " + compensationEvent.getOrderId())
+                    () -> new RuntimeException("Payment not found for orderId: " + compensationEvent.getOrderId())
             );
-            if(payment.getStatus() == Status.REFUNDED) {
+            if (payment.getStatus() == Status.REFUNDED) {
                 System.out.println("Payment already refunded for orderId: " + payment.getOrderId());
                 return;
             }
-            if(payment.getSuccess() == false){
+            if (payment.getSuccess() == false) {
                 System.out.println("Payment already failed for orderId: " + payment.getOrderId() + ", no need to refund.");
                 return;
             }
@@ -122,8 +115,7 @@ public class PaymentCommandHandler {
             payment.setSuccess(false);
             paymentRepository.save(payment);
             System.out.println("Payment refunded for orderId: " + payment.getOrderId());
-        }
-        catch (Exception e){
+        } catch (Exception e) {
             throw new RuntimeException("Error handling compensation command: " + e.getMessage(), e);
         }
     }

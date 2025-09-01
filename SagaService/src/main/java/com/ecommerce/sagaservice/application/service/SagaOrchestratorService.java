@@ -34,7 +34,7 @@ public class SagaOrchestratorService {
             sagaState.setUserId(event.getUserId());
             sagaState.setProductId(event.getProductId());
             sagaState.setQuantity(event.getQuantity());
-            sagaState.setCurrentStep("ORDER_CREATED");
+            sagaState.setCurrentStep("ORDER");
             sagaState.setStatus("IN_PROGRESS");
             //payload olarak da objectMapper ile string hale getirdiğimiz eventi koyalım
             sagaState.setPayload(payload);
@@ -65,7 +65,7 @@ public class SagaOrchestratorService {
             SagaState sagaState = sagaStateRepository.findByOrderId(paymentEvent.getOrderId());
             //SagaState'nin currentStep'ini güncelleyelim
             if(paymentEvent.isSuccess()){
-                sagaState.setCurrentStep("PAYMENT_COMPLETED");
+                sagaState.setCurrentStep("PAYMENT");
                 sagaStateRepository.save(sagaState);
                 sagaStepHandler.handleProductStep(sagaState, payload);
             }
@@ -92,7 +92,7 @@ public class SagaOrchestratorService {
             //Şimdi ise handle edelim eğer success ise
             if(productEvent.isSuccess()){
                 //SagaState'nin currentStep'ini güncelleyelim ve prodcut ayrıldı olarak değiştirelim
-                sagaState.setCurrentStep("PRODUCT_RESERVED");
+                sagaState.setCurrentStep("PRODUCT");
                 sagaStateRepository.save(sagaState);
                 sagaStepHandler.handleDeliveryStep(sagaState, payload);
             }

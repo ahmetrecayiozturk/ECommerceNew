@@ -1,5 +1,7 @@
-package com.ecommerce.userservice.api;
+package com.ecommerce.userservice.api.controller;
 
+import com.ecommerce.userservice.api.LoginRequest;
+import com.ecommerce.userservice.api.RegisterReqıest;
 import com.ecommerce.userservice.application.UserApplicationService;
 import com.ecommerce.userservice.domain.model.User;
 import jakarta.servlet.http.HttpServletRequest;
@@ -9,7 +11,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.core.env.Environment;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/user")
@@ -57,6 +60,15 @@ public class UserController {
         }
     }
 
+    @GetMapping("get-all-user")
+    public ResponseEntity<?> getAllUser(){
+        try {
+            List<User> users = userApplicationService.getAllUsers();
+            return ResponseEntity.ok(users);
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body("Error fetching users: " + e.getMessage());
+        }
+    }
     @PostMapping("/health-check")
     public ResponseEntity<String> healthCheck(){
         String port = env.getProperty("server.port");

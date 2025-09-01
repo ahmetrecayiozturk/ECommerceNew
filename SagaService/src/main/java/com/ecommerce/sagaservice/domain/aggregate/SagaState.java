@@ -14,6 +14,7 @@ public class SagaState {
     private Long userId;
     private Long productId;
     private int quantity;
+    //private int retryCount = 0;
     private String currentStep;
     private String status;
     //payload uzun olunca böyle yaptım 255'i geçse de sorun olmuyor

@@ -24,20 +24,31 @@ public class Payment {
     private Long productId;
     @NotNull
     @Enumerated(EnumType.STRING)
+    @NotNull
     private Status status;
+    @NotNull
+    private boolean isPaid;
     @NotNull
     private boolean success;
     private ZonedDateTime createdAt;
-    public Payment() {
-        this.createdAt = ZonedDateTime.now(ZoneId.of("Europe/Istanbul"));
-    }
-    public Payment(String status, Long orderId, boolean success) {
+    public Payment() {}
+    public Payment(String status, Long orderId, boolean success,boolean isPaid) {
         this.status = Status.valueOf(status);
         this.orderId = orderId;
         this.success = success;
+        this.isPaid = isPaid;
         this.createdAt = ZonedDateTime.now(ZoneId.of("Europe/Istanbul"));
     }
     public boolean getSuccess() {
         return success;
+    }
+    public boolean getIsPaid() {
+        return isPaid;
+    }
+    public void setSuccess(boolean success) {
+        this.success = success;
+    }
+    public void setIsPaid(boolean isPaid) {
+        this.isPaid = isPaid;
     }
 }

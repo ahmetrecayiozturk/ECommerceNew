@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
+import java.util.List;
 
 @Service
 public class UserApplicationService {
@@ -95,6 +96,13 @@ public class UserApplicationService {
         return "ROLE_" + role;
     }
 
+    public List<User> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty()) {
+            System.out.println("No users found.");
+        }
+        return users;
+    }
     public User getUserByEmail(String email) {
         return userRepository.findByEmail(email);
     }

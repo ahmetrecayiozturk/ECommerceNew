@@ -1,15 +1,15 @@
 package com.ecommerce.orderservice.api;
 
 import com.ecommerce.orderservice.application.service.OrderService;
+import com.ecommerce.orderservice.domain.aggregate.Order;
 import com.ecommerce.orderservice.infrastructure.outbox.OutboxEvent;
 import com.ecommerce.orderservice.infrastructure.outbox.OutboxRepository;
 import org.springframework.http.ResponseEntity;
 import org.springframework.core.env.Environment;
 
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/order")
@@ -34,6 +34,11 @@ public class OrderController {
         catch(Exception e){
             return ResponseEntity.status(500).body("Error creating order: " + e.getMessage());
         }
+    }
+    @GetMapping("/get-all")
+    public ResponseEntity<List<Order>> getOrders() {
+        List<Order> order = orderService.getAllOrders();
+        return ResponseEntity.ok(order);
     }
     @PostMapping("/health-check")
     public ResponseEntity<String> healthCheck() {

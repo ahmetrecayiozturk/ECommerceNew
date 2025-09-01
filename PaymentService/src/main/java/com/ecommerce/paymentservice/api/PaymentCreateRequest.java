@@ -9,7 +9,8 @@ import java.util.List;
 @Data
 public class PaymentCreateRequest {
     private Long orderId;
+    private String productId;
     private Long userId;
-    private String status;
-    private boolean success;
+    //private String status;
+    //private boolean success;
 }
