@@ -22,12 +22,16 @@ public class SagaTimeoutScheduler {
         this.sagaStepHandler = sagaStepHandler;
     }
 
-    @Scheduled(fixedDelay = 60000) // Her 60 saniyede bir çalışır
+    @Scheduled(fixedDelay = 60000)//Her 60 saniyede bir çalışacak şekilde ayalıyoruz, bu bize atıyorum ödeme bekliyorz o yüzden saga hala sagastate in_progress ise ve currentstep payment değilise ve 60 saniyeden fazla olduysa tekrar payment command'ı atacak
     public void checkTimeout(){
         System.out.println("SagaTimeoutScheduler: checkTimeout");
         List<SagaState> pendingSagas = sagaStateRepository.findByStatus("IN_PROGRESS");
         if(pendingSagas != null && !pendingSagas.isEmpty()){
             for(SagaState sagaState: pendingSagas){
+                //Eğer sagastatenin durumu COMPENSATED veya COMPLETED ise bu saga'yı atlıyoruz çünkü zaten delivery edilmiş bitmiş ya da companse edilmiş sagalar bunlar
+                if ("COMPENSATED".equals(sagaState.getStatus()) || "COMPLETED".equals(sagaState.getStatus())) {
+                    continue;
+                }
                 if("ORDER".equals(sagaState.getCurrentStep())){
                     System.out.println("SagaTimeoutScheduler: PAYMENT step timeout for orderId " + sagaState.getOrderId());
                     sagaStepHandler.handlePaymentStep(sagaState, sagaState.getPayload());
@@ -43,5 +47,4 @@ public class SagaTimeoutScheduler {
             }
         }
     }
-
 }

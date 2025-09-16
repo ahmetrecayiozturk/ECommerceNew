@@ -20,15 +20,30 @@ public class SagaOrchestratorService {
         this.sagaStateRepository = sagaStateRepository;
     }
 
-    //burada order olutuurlduktan sonra order command yayınlancak bunu alan payment service bunu işleyip payment events yayınlayacak
+    //burada order oluşturulma eventi yakalandıktan sonra order command yayınlancak bunu alan payment service bunu işleyip payment events yayınlayacak, eğer hata çıkarsa compansate işlemi yapılacak
     @KafkaListener(topics = "order-events", groupId = "saga-orchestrator")
     public void handleOrderEvent(String payload){
         try{
             //kontrol için log ekleyelim
             System.out.println("Received order event: " + payload);
-            //önce gelen eventi deserialize et
+            //gelen eventi deserialize edelim
             OrderEvent event = objectMapper.readValue(payload, OrderEvent.class);
-            //şimdi bununla bir sagaeventi oluşturacağız, bu evente gerekli yerlerini event'ten gelen bilgiler ile dolduracağız
+            //önceden böyle bir sagastate var mıymış onu kontrol ediyoruz var ise ve eğer bir sonraki adıma geçmiş ise sagastate idempotency kuralı yüzünden tekrar işlemiyoruz
+            SagaState existingSagaState = sagaStateRepository.findByOrderId(event.getOrderId());
+            //eğer varsa ve bir sonraki adımda ise sagastate bunu işlemeyeceğiz
+            if (existingSagaState != null) {
+                if (
+                                "PAYMENT".equals(existingSagaState.getCurrentStep())   ||
+                                "PRODUCT".equals(existingSagaState.getCurrentStep())   ||
+                                "DELIVERY".equals(existingSagaState.getCurrentStep())  ||
+                                "COMPENSATED".equals(existingSagaState.getStatus())    ||
+                                "COMPLETED".equals(existingSagaState.getStatus())
+                ) {
+                    System.out.println("Order event already processed " + event.getOrderId());
+                    return;
+                }
+            }
+            //Şimdi bir sagastate oluşturalım, normalde burada ilk kez oluşturuluyor sagastate sonraki adımlarda bu oluşturulan sagastate güncelleniyor, eğer hata çıkarsa compansate işlemi yapılacak
             SagaState sagaState = new SagaState();
             sagaState.setOrderId(event.getOrderId());
             sagaState.setUserId(event.getUserId());
@@ -36,13 +51,10 @@ public class SagaOrchestratorService {
             sagaState.setQuantity(event.getQuantity());
             sagaState.setCurrentStep("ORDER");
             sagaState.setStatus("IN_PROGRESS");
-            //payload olarak da objectMapper ile string hale getirdiğimiz eventi koyalım
             sagaState.setPayload(payload);
-            //şimdi sagaState'yi kaydedelim
+
             sagaStateRepository.save(sagaState);
-            //şimdi de paymentten sonraki adıma geçelim
             sagaStepHandler.handlePaymentStep(sagaState, payload);
-            //kontrol için log ekleyelim
             System.out.println("SagaState created by order and saved: " + sagaState);
         }
         catch(Exception e){
@@ -51,27 +63,40 @@ public class SagaOrchestratorService {
             throw new RuntimeException(e);
         }
     }
-    //payment eventi yakalayan bu method eğer payment başarılı ise bir sonraki adım için payment commands yayınlayacak, bunu alan payment service product eventsi yayınlayacak
+    //burada payment eventi yakalandıktan sonra payment command yayınlancak bunu alan product service bunu işleyip product events yayınlayacak, eğer hata çıkarsa compansate işlemi yapılacak
+
     @KafkaListener(topics = "payment-events", groupId = "saga-orchestrator")
     public void handlePaymentEvent(String payload){
         try{
             System.out.println("Received payment event: " + payload);
-            //önce gelen eventi deserialize et
+            //önce gelen eventi deserialize edelim
             PaymentEvent paymentEvent = objectMapper.readValue(payload, PaymentEvent.class);
-            System.out.println(paymentEvent.isSuccess());
             //şimdi sagaState'yi bulalım orderId ile
-            System.out.println("PaymentEvent found: " + paymentEvent);
-            //Şimdi bu sagaState'yi payment olmuşsa payment completed yapalım current stepini
             SagaState sagaState = sagaStateRepository.findByOrderId(paymentEvent.getOrderId());
-            //SagaState'nin currentStep'ini güncelleyelim
+            //eğer sagaState null ise bu orderId ile bir sagaState yok demektir
+            if (sagaState == null) {
+                System.out.println("SagaState not found for orderId: " + paymentEvent.getOrderId());
+                return;
+            }
+            //idempotency kontrolü yapıyoruz, eğer bir sonraki adıma geçmiş ise bu event bir daha işlenmeyecektir
+            if (
+                            "PRODUCT".equals(sagaState.getCurrentStep()) ||
+                            "DELIVERY".equals(sagaState.getCurrentStep()) ||
+                            "COMPENSATED".equals(sagaState.getStatus()) ||
+                            "COMPLETED".equals(sagaState.getStatus())
+            ) {
+                System.out.println("Payment event already processed for orderId: " + paymentEvent.getOrderId());
+                return;
+            }
+            //Eğer ödeme başarılı ise şu anki adım olarak payment yapalım
             if(paymentEvent.isSuccess()){
                 sagaState.setCurrentStep("PAYMENT");
                 sagaStateRepository.save(sagaState);
                 sagaStepHandler.handleProductStep(sagaState, payload);
             }
+            //Eğer ödeme başarılı değilse log basalım ve compansate işlemi yapalım
             else{
                 System.out.println("Payment failed for orderId: " + paymentEvent.getOrderId());
-                //eğer payment başarısız olduysa, compensating işlemi yapalım
                 sagaStepHandler.compensate(sagaState, payload);
             }
         }
@@ -79,26 +104,40 @@ public class SagaOrchestratorService {
             throw new RuntimeException(e);
         }
     }
-    //product eventini yakalayan bu method eğer product rezervasyonu başarılı ise bir sonraki adım için product commands yayınlayacak, bunu alan product service delivery eventsi yayınlayacak
+    //burada product eventi yakalandıktan sonra product command yayınlancak bunu alan delivery service bunu işleyip delivery events yayınlayacak, eğer hata çıkarsa compansate işlemi yapılacak
+
     @KafkaListener(topics = "product-events", groupId = "saga-orchestrator")
     public void handleProductEvent(String payload){
-        System.out.println( "handleProductEvent çalıştı");
+        System.out.println("handleProductEvent çalıştı");
         try{
             System.out.println("Received product event: " + payload);
-            //önce eventi bulalım ve deserialize edelim
+            //önce gelen eventi deserialize edelim
             ProductEvent productEvent = objectMapper.readValue(payload, ProductEvent.class);
-            //Şimdi de sagaState'yi bulalım orderId ile
+            //şimdi sagaState'yi bulalım orderId ile
             SagaState sagaState = sagaStateRepository.findByOrderId(productEvent.getOrderId());
-            //Şimdi ise handle edelim eğer success ise
+            //eğer sagastate bulunmazsa log basalım
+            if (sagaState == null) {
+                System.out.println("SagaState not found for orderId: " + productEvent.getOrderId());
+                return;
+            }
+            //idempotency kontrolü yapıyoruz, eğer bir sonraki adıma geçmiş ise bu event bir daha işlenmeyecektir
+            if (
+                            "DELIVERY".equals(sagaState.getCurrentStep()) ||
+                            "COMPENSATED".equals(sagaState.getStatus()) ||
+                            "COMPLETED".equals(sagaState.getStatus())
+            ) {
+                System.out.println("Product event already processed for orderId: " + productEvent.getOrderId());
+                return;
+            }
+            //Eğer ürün rezervasyonu başarılı ise şu anki adım olarak product yapalım
             if(productEvent.isSuccess()){
-                //SagaState'nin currentStep'ini güncelleyelim ve prodcut ayrıldı olarak değiştirelim
                 sagaState.setCurrentStep("PRODUCT");
                 sagaStateRepository.save(sagaState);
                 sagaStepHandler.handleDeliveryStep(sagaState, payload);
             }
+            //Eğer ürün rezervasyonu başarılı değilse log basalım ve compansate işlemi yapalım
             else{
                 System.out.println("Product reservation failed for orderId: " + productEvent.getOrderId());
-                //eğer product rezervasyonu başarısız olduysa, compensating işlemi yapalım
                 sagaStepHandler.compensate(sagaState, payload);
             }
         }
@@ -106,21 +145,35 @@ public class SagaOrchestratorService {
             throw new RuntimeException(e);
         }
     }
-    //delivery eventini yakalayan bu method eğer delivery başarılı ise sagaState'i tamamlayacak, eğer delivery başarısız ise compensating işlemi yapacak,
-    //bu compensating işlemi tüm şeylerde methodlarda zaten olan bir adım
+    //burada delivery eventi yakalandıktan sonra işlem tamamlanmış olacak, eğer hata çıkarsa compansate işlemi yapılacak
     @KafkaListener(topics = "delivery-events", groupId = "saga-orchestrator")
     public void handleDeliveryEvent(String payload){
         try{
             System.out.println("Received delivery event: " + payload);
             //gelen eventi deserialize edelim
             DeliveryEvent deliveryEvent = objectMapper.readValue(payload, DeliveryEvent.class);
-            //saga stateyi bulalım bununla event atcaz şimdi
+            //şimdi sagaState'yi bulalım orderId ile
             SagaState sagaState = sagaStateRepository.findByOrderId(deliveryEvent.getOrderId());
+            //eğer sagastate bulunmazsa log basalım
+            if (sagaState == null) {
+                System.out.println("SagaState not found for orderId: " + deliveryEvent.getOrderId());
+                return;
+            }
+            //idempotency kontrolü yapıyoruz, eğer bir sonraki adıma geçmiş ise bu event bir daha işlenmeyecektir
+            if (
+                            "COMPENSATED".equals(sagaState.getStatus()) ||
+                            "COMPLETED".equals(sagaState.getStatus())
+            ) {
+                System.out.println("Delivery event already processed for orderId: " + deliveryEvent.getOrderId());
+                return;
+            }
+            //Eğer delivery başarılı ise sagastatein durumunu completed olarak işaretleyelim
             if(deliveryEvent.isSuccess()){
                 System.out.println("Delivery successful for orderId: " + deliveryEvent.getOrderId());
                 sagaState.setStatus("COMPLETED");
                 sagaStateRepository.save(sagaState);
             }
+            //Eğer delivey başarılı değilse log basalım ve compansate işlemi yapalım
             else{
                 System.out.println("Delivery failed for orderId: " + deliveryEvent.getOrderId());
                 sagaStepHandler.compensate(sagaState, payload);
@@ -131,23 +184,3 @@ public class SagaOrchestratorService {
         }
     }
 }
-/*
-    /*
-
-    //compensation testi için bu methodu kullanıyorum
-    @KafkaListener(topics = "delivery-events", groupId = "saga-orchestrator")
-    public void handleDeliveryEvent(String payload){
-        try{
-            System.out.println(">>> handleDeliveryEvent ÇALIŞTI <<<");
-            DeliveryEvent deliveryEvent = objectMapper.readValue(payload, DeliveryEvent.class);
-            SagaState sagaState = sagaStateRepository.findByOrderId(deliveryEvent.getOrderId());
-            System.out.println(">>> handleDeliveryEvent: sagaState=" + sagaState);
-            sagaStepHandler.compensate(sagaState, payload);
-            System.out.println(">>> compensate çağrıldı");
-        } catch(Exception e){
-            System.out.println("handleDeliveryEvent exception: " + e.getMessage());
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-    }
-     */

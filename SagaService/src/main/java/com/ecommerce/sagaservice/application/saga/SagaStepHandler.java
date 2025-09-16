@@ -12,25 +12,46 @@ public class SagaStepHandler {
     private final SagaStateRepository sagaStateRepository;
     private final KafkaEventPublisher kafkaEventPublisher;
     private final ObjectMapper objectMapper;
+
     public SagaStepHandler(SagaStateRepository sagaStateRepository, KafkaEventPublisher kafkaEventPublisher, ObjectMapper objectMapper) {
         this.sagaStateRepository = sagaStateRepository;
         this.kafkaEventPublisher = kafkaEventPublisher;
         this.objectMapper = objectMapper;
     }
+
     public void handlePaymentStep(SagaState sagaState, String payload) {
-        System.out.println("SagaStepHandler: handlePaymentStep");
+        //Idempotency kontrolü olarak burada bize parametre olarak gelen sagaState'in currentStep'ini kontrol ediyoruz, eğer payment ise zaten bu adım gönderilmiş demektir, o yüzden log basıp return ediyoruz
+        if ("PAYMENT".equals(sagaState.getCurrentStep())) {
+            System.out.println("Payment step already sent for orderId: " + sagaState.getOrderId());
+            return;
+        }
+        //Parametre olarak gelen sagaState'in currentttepini payment yapıyoruz ve kaydediyoruz, sonra da payment comamndi yayınlıyoruz
         sagaState.setCurrentStep("PAYMENT");
         sagaStateRepository.save(sagaState);
         kafkaEventPublisher.publishEvent("payment-commands", payload);
         System.out.println("Payment commands sent successfully");
     }
+
     public void handleProductStep(SagaState sagaState, String eventPayload) {
+        //Idempotency kontrolü olarak burada bize parametre olarak gelen sagaState'in currentStep'ini kontrol ediyoruz, eğer product ise zaten bu adım gönderilmiş demektir, o yüzden log basıp return ediyoruz
+        if ("PRODUCT".equals(sagaState.getCurrentStep())) {
+            System.out.println("Product step already sent for orderId: " + sagaState.getOrderId());
+            return;
+        }
+        //Parametre olarak gelen sagaState'in currentttepini product yapıyoruz ve kaydediyoruz, sonra da product comamndi yayınlıyoruz
         sagaState.setCurrentStep("PRODUCT");
         sagaStateRepository.save(sagaState);
         kafkaEventPublisher.publishEvent("product-commands", eventPayload);
         System.out.println("Product commands sent successfully");
     }
+
     public void handleDeliveryStep(SagaState sagaState, String eventPayload) {
+        //Idempotency kontrolü olarak burada bize parametre olarak gelen sagaState'in currentStep'ini kontrol ediyoruz, eğer delivery ise zaten bu adım gönderilmiş demektir, o yüzden log basıp return ediyoruz
+        if ("DELIVERY".equals(sagaState.getCurrentStep())) {
+            System.out.println("Delivery step already sent for orderId: " + sagaState.getOrderId());
+            return;
+        }
+        //Parametre olarak gelen sagaState'in currentttepini delivery yapıyoruz ve kaydediyoruz, sonra da delivery comamndi yayınlıyoruz
         sagaState.setCurrentStep("DELIVERY");
         sagaStateRepository.save(sagaState);
         kafkaEventPublisher.publishEvent("delivery-commands", eventPayload);
@@ -38,7 +59,12 @@ public class SagaStepHandler {
     }
 
     public void compensate(SagaState sagaState, String eventPayload) {
-        System.out.println(">>> Compensation başlatıldı");
+        //Idempotency kontrolü olarak burada bize parametre olarak gelen sagaState'in status'unu kontrol ediyoruz, eğer compensated ise zaten bu adım gönderilmiş demektir, o yüzden log basıp return ediyoruz
+        if ("COMPENSATED".equals(sagaState.getStatus())) {
+            System.out.println("Already compensated for orderId: " + sagaState.getOrderId());
+            return;
+        }
+        //Parametre olarak gelen sagaState'in status'unu compensating yapıyoruz ve kaydediyoruz, sonra da compensation event yayınlıyoruz
         sagaState.setStatus("COMPENSATING");
         sagaStateRepository.save(sagaState);
         try {
@@ -46,7 +72,7 @@ public class SagaStepHandler {
             compensationEvent.setOrderId(sagaState.getOrderId());
             compensationEvent.setUserId(sagaState.getUserId());
             compensationEvent.setProductId(sagaState.getProductId());
-            compensationEvent.setQuantity(sagaState.getQuantity()); // <-- BURADA
+            compensationEvent.setQuantity(sagaState.getQuantity());
             compensationEvent.setFailedStep(sagaState.getCurrentStep());
             compensationEvent.setReason("Compensation due to failure in step: " + sagaState.getCurrentStep());
             System.out.println("SagaState: " + sagaState);
@@ -58,6 +84,7 @@ public class SagaStepHandler {
         }
     }
 }
+
 /*
 chatgpt'ye yaptığımı söyledim şamasını çizmesini istedim bunu verdi, aslında yaptığım çok basit, command yayınlandıktan sonra event yayınlanır ve öylece devam eder
 eğer bir adımda hata olursa o adımın compensation eventini yayınlar ve her servis işlemi rollback yapar, tabi burada biz compensation eventini yayınlarken
