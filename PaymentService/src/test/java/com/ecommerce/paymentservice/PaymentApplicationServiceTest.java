@@ -1,7 +1,7 @@
 package com.ecommerce.paymentservice;
 
 import com.ecommerce.paymentservice.api.PaymentCreateRequest;
-import com.ecommerce.paymentservice.application.PaymentApplicationService;
+import com.ecommerce.paymentservice.application.service.PaymentApplicationService;
 import com.ecommerce.paymentservice.domain.aggregate.Payment;
 import com.ecommerce.paymentservice.domain.model.Status;
 import com.ecommerce.paymentservice.infrastructure.repository.PaymentRepository;

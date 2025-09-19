@@ -3,6 +3,7 @@ package com.ecommerce.productservice.domain.events;
 import com.ecommerce.productservice.domain.model.ProductSnapshot;
 import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Data
 public class OrderEvent {
@@ -11,6 +12,7 @@ public class OrderEvent {
     private Long userId;
     private Long productId;
     private int quantity;
+    @JsonProperty("productSnapshot")
     private ProductSnapshot productSnapshot; // yeni alan
 
     public Long getProductId() {

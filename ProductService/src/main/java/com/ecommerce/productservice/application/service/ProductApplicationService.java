@@ -56,6 +56,42 @@ public class ProductApplicationService {
         }
     }
 
+    public List<Product> getProductsByFilter(String category){
+        try{
+            List<Product> products = productRepository.findAll();
+            if(category != null && !category.isEmpty()){
+                products = products.stream()
+                        .filter(product -> product.getCategory().name().equalsIgnoreCase(category))
+                        .toList();
+            }
+            if(products.isEmpty()){
+                throw new RuntimeException("No products found");
+            }
+            return products;
+        }
+        catch(Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
+    public List<Product> getProductsByPriceRange(Double minPrice, Double maxPrice){
+        try{
+            List<Product> products = productRepository.findAll();
+            if(minPrice != null && maxPrice != null){
+                products = products.stream()
+                        .filter(product -> product.getPrice() >= minPrice && product.getPrice() <= maxPrice)
+                        .toList();
+            }
+            if(products.isEmpty()){
+                throw new RuntimeException("No products found");
+            }
+            return products;
+        }
+        catch(Exception e){
+            throw new RuntimeException(e);
+        }
+    }
+
     public List<Product> getAllProduct(){
         try{
             List<Product> products = productRepository.findAll();

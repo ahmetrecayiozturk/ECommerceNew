@@ -2,6 +2,7 @@ package com.ecommerce.paymentservice.domain.events;
 
 import com.ecommerce.paymentservice.domain.model.ProductSnapshot;
 import com.fasterxml.jackson.annotation.JsonAlias;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data

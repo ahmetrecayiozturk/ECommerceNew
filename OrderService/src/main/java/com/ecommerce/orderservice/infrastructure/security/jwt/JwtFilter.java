@@ -29,10 +29,30 @@ public class JwtFilter extends OncePerRequestFilter {
             throws ServletException, IOException {
 
         String path = request.getServletPath();
-        if (path.equals("/auth/login") || path.equals("/auth/register")) {
+        if (
+                path.equals("/api/order/health-check") ||
+                        path.equals("/api/order/get-all") ||
+                        path.startsWith("/actuator/")
+        ) {
             filterChain.doFilter(request, response);
             return;
         }
+        /*
+        // PERMITALL PATHLER İÇİN JWT KONTROLÜ YAPMADAN DEVAM ET!
+        if (
+                path.startsWith("/api/order/") ||
+                        path.startsWith("/api/payment/") ||
+                        path.startsWith("/api/product/") ||
+                        path.startsWith("/api/delivery/") ||
+                        path.startsWith("/api/saga/") ||
+                        path.equals("/auth/login") ||
+                        path.equals("/auth/register") ||
+                        path.startsWith("/actuator/")
+        ) {
+            filterChain.doFilter(request, response);
+            return;
+        }*/
+
 
         String authHeader = request.getHeader("Authorization");
         String token = null;

@@ -14,6 +14,7 @@ public class OutboxEvent {
     private Long id;
     private Long orderId;
     private Long userId;
+    private Long productId;
     private String aggregateType;
     private String eventType;
     @Column(columnDefinition = "TEXT")
@@ -22,10 +23,11 @@ public class OutboxEvent {
     private boolean success;
     private boolean published = false;
     private String paymentStatus; // e.g., "PENDING", "COMPLETED", "FAILED"
-    public OutboxEvent(boolean success, Long orderId, Long userId, String aggregateType, String eventType, String payload, String paymentStatus) {
+    public OutboxEvent(boolean success, Long orderId, Long userId, Long productId, String aggregateType, String eventType, String payload, String paymentStatus) {
         this.success = success;
         this.orderId = orderId;
         this.userId = userId;
+        this.productId = productId;
         this.aggregateType = aggregateType;
         this.eventType = eventType;
         this.payload = payload;

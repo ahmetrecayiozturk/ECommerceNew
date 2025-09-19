@@ -34,15 +34,59 @@ public class ProductCommandHandler {
     public void handleProductCommand(String payload){
         try{
             System.out.println("handleProductCommand called! Payload: " + payload);
+            OutboxEvent outboxEventTemp = objectMapper.readValue(payload, OutboxEvent.class);
+            PaymentEvent paymentEvent = objectMapper.readValue(outboxEventTemp.getPayload(), PaymentEvent.class);
+            System.out.println("handleProductCommand called! productId: " + paymentEvent.getProductId());
+            System.out.println("PaymentEvent: " + paymentEvent);
+
+            // DOĞRU SATIR! OutboxEvent'in productId'si root'tan al!
+            Optional<Product> findedProduct = productRepository.findById(outboxEventTemp.getProductId());
+
+            boolean success = false;
+            if(findedProduct.isPresent()){
+                Product product = findedProduct.get();
+                int stockQuantity = product.getStockQuantity();
+                if(stockQuantity>= paymentEvent.getQuantity()){
+                    product.setStockQuantity(stockQuantity-paymentEvent.getQuantity());
+                    System.out.println(product.getStockQuantity() + " adet ürün kaldı" + paymentEvent.getQuantity() + "kadar azaldı"
+                            + product.getProductName() + " ürününden");
+                    productRepository.save(product);
+                    success = true;
+                }
+                OutboxEvent outboxEvent = new OutboxEvent();
+                outboxEvent.setOrderId(paymentEvent.getOrderId());
+                outboxEvent.setUserId(paymentEvent.getUserId());
+                outboxEvent.setProductId(paymentEvent.getProductId());
+                outboxEvent.setAggregateType("Product");
+                outboxEvent.setEventType("PRODUCT_RESERVED");
+                outboxEvent.setPayload(objectMapper.writeValueAsString(paymentEvent));
+                outboxEvent.setTimestamp(ZonedDateTime.now(ZoneId.of("UTC")));
+                outboxEvent.setSuccess(success);
+                outboxEvent.setPublished(false);
+                outboxRepository.save(outboxEvent);
+            }
+        }
+        catch(Exception e)
+        {
+            throw new RuntimeException(e);
+        }
+    }
+/*
+    @KafkaListener(topics = "product-commands", groupId = "product-service")
+    @Transactional
+    public void handleProductCommand(String payload){
+        try{
+            System.out.println("handleProductCommand called! Payload: " + payload);
             //önce gidip eventi bulalım
-            OutboxEvent outboxEventTemo = objectMapper.readValue(payload, OutboxEvent.class);
+            OutboxEvent outboxEventTemp = objectMapper.readValue(payload, OutboxEvent.class);
             //Önce gelen eventi deserialize edelim
-            PaymentEvent paymentEvent = objectMapper.readValue(outboxEventTemo.getPayload(), PaymentEvent.class);
+            PaymentEvent paymentEvent = objectMapper.readValue(outboxEventTemp.getPayload(), PaymentEvent.class);
+            System.out.println("handleProductCommand called! productId: " + paymentEvent.getProductId());
             //PaymentEventEnvelope envelope = objectMapper.readValue(payload, PaymentEventEnvelope.class);
             //PaymentEvent paymentEvent = objectMapper.readValue(envelope.getPayload(), PaymentEvent.class);
             System.out.println("PaymentEvent: " + paymentEvent);
             //Şimdi de bu eventten gidip productu bulalım ve doğru şeyler ile düşelim stoğu
-            Optional<Product> findedProduct = productRepository.findById(paymentEvent.getProductId());
+            Optional<Product> findedProduct = productRepository.findById(outboxEventTemp.getPayload().getProductId());
             //şimdi biz bir success belirleyelim default false olsun eğer biz burada stoğu düşürüp save edersek success true olsun ve outbox eventi buna göre save edelim
             boolean success = false;
             if(findedProduct.isPresent()){
@@ -74,6 +118,7 @@ public class ProductCommandHandler {
             throw new RuntimeException(e);
         }
     }
+    */
     @KafkaListener(topics="compensation-commands", groupId = "product-service")
     public void handleCompensationCommand(String payload){
         try{

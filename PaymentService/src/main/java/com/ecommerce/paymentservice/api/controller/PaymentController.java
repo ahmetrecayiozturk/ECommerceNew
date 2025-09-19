@@ -1,7 +1,7 @@
 package com.ecommerce.paymentservice.api.controller;
 
 import com.ecommerce.paymentservice.api.PaymentCreateRequest;
-import com.ecommerce.paymentservice.application.PaymentApplicationService;
+import com.ecommerce.paymentservice.application.service.PaymentApplicationService;
 import com.ecommerce.paymentservice.domain.aggregate.Payment;
 import com.ecommerce.paymentservice.domain.model.Status;
 import com.ecommerce.paymentservice.infrastructure.repository.PaymentRepository;
@@ -10,11 +10,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/payment")

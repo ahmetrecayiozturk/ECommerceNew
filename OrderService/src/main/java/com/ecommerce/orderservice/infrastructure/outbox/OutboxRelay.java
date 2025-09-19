@@ -25,10 +25,28 @@ public class OutboxRelay {
     //ve eğer örneğimizden devam edersek, order oluşmazda db'ye commit edilmeyecek ve rollback olarak, aynı şekilde ordereventimiz de outbox_events tablomuza kaydolmayıp rollback
     //olacak, ve bu aşşağıdaki method gibi bir method ile scheculed olarka 5 saniyede 3 saniyede bir isPublished'i false olan tüm eventleri otubox_events tablomuzdan alıp yayınlıyoruz
     //yani burası bu işe yarıyor
+    /*@Scheduled(fixedDelay = 5000)
+    private void publishOutboxEvents(){
+        System.out.println("Publishing order events...");
+        List<OutboxEvent> outboxEvents = outboxRepository.findByPublishedFalse();
+        for(OutboxEvent outboxEvent : outboxEvents){
+            try{
+                // Sadece asıl eventin payload'ı publish!
+                kafkaTemplate.send("order-events", outboxEvent.getPayload());
+                outboxEvent.setPublished(true);
+                outboxRepository.save(outboxEvent);
+                System.out.println("Order event published successfully: " + outboxEvent.getPayload());
+            }
+            catch (Exception e) {
+                e.printStackTrace();
+                continue;
+            }
+        }
+    }*/
     @Scheduled(fixedDelay = 5000)
     private void publishOutboxEvents(){
-        System.out.println("Publishing outbox events...");
-        System.out.println(outboxRepository.findAll());
+        System.out.println("Publishing order events...");
+        //System.out.println(outboxRepository.findAll());
         List<OutboxEvent> outboxEvents = outboxRepository.findByPublishedFalse();
         for(OutboxEvent outboxEvent : outboxEvents){
             try{
@@ -36,7 +54,7 @@ public class OutboxRelay {
                 kafkaTemplate.send("order-events", payload);
                 outboxEvent.setPublished(true);
                 outboxRepository.save(outboxEvent);
-                System.out.println("Outbox event published successfully: " + payload);
+                System.out.println("Order event published successfully: " + payload);
             }
             catch (Exception e) {
                 // Handle serialization error

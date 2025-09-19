@@ -2,7 +2,7 @@ package com.ecommerce.userservice.api.controller;
 
 import com.ecommerce.userservice.api.LoginRequest;
 import com.ecommerce.userservice.api.RegisterReqıest;
-import com.ecommerce.userservice.application.UserApplicationService;
+import com.ecommerce.userservice.application.service.UserApplicationService;
 import com.ecommerce.userservice.domain.model.User;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -39,8 +39,19 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<?> loginUser(@RequestBody LoginRequest loginRequest){
         try {
+            // Kullanıcıyı bul ve oturum aç
+            User user = userApplicationService.getUserByEmail(loginRequest.getEmail());
+            if(user == null) {
+                return ResponseEntity.status(400).body(java.util.Map.of("error", "User not found"));
+            }
+            // Şifresini kontrol et (kendi service'inde zaten kontrol ediyorsan gerek yok)
             String token = userApplicationService.loginUser(loginRequest.getEmail(), loginRequest.getPassword());
-            return ResponseEntity.ok(java.util.Map.of("token", token));
+            // Artık userId ve email de dönüyoruz!
+            return ResponseEntity.ok(java.util.Map.of(
+                    "token", token,
+                    "userId", user.getId(),
+                    "email", user.getEmail()
+            ));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(java.util.Map.of("error", "Error logging in user: " + e.getMessage()));
         }

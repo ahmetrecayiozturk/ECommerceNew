@@ -1,5 +1,6 @@
 package com.ecommerce.deliveryservice.application;
 
+import com.ecommerce.deliveryservice.application.service.DeliveryApplicationService;
 import com.ecommerce.deliveryservice.domain.aggregate.Delivery;
 import com.ecommerce.deliveryservice.domain.events.CompensationEvent;
 import com.ecommerce.deliveryservice.domain.events.DeliveryEvent;

@@ -14,6 +14,7 @@ public class OutboxEvent {
     private Long id;
     private Long orderId;
     private Long userId;
+    private Long productId;
     private String aggregateType;
     private String eventType;
     private boolean success;

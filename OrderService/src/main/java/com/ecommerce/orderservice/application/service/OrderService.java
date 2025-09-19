@@ -39,6 +39,7 @@ public class OrderService {
         if (productSnapshot == null) {
             throw new IllegalArgumentException("Product not found");
         }
+        System.out.println("Product snapshot alındı: " + productSnapshot);
         //orderin oluşturulması
         Order order = new Order();
         order.setUserId(userId);

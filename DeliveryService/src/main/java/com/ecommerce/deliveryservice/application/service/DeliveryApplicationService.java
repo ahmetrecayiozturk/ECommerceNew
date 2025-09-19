@@ -1,4 +1,4 @@
-package com.ecommerce.deliveryservice.application;
+package com.ecommerce.deliveryservice.application.service;
 
 
 import com.ecommerce.deliveryservice.api.DeliveryCreateRequest;

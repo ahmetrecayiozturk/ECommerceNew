@@ -1,5 +1,7 @@
-package com.ecommerce.productservice.api;
+package com.ecommerce.productservice.api.controller;
 
+import com.ecommerce.productservice.api.ProductCreateRequest;
+import com.ecommerce.productservice.api.ProductUpdateRequest;
 import com.ecommerce.productservice.application.service.ProductApplicationService;
 import com.ecommerce.productservice.domain.aggregate.Product;
 import org.springframework.http.ResponseEntity;
@@ -39,6 +41,13 @@ public class ProductController {
     public ResponseEntity<List<Product>> getAllProducts() {
         return ResponseEntity.ok((List<Product>) productApplicationService.getAllProducts());
     }
+
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<List<Product>> getProductsByFilter(@RequestParam(required = false) String category) {
+        List<Product> products = productApplicationService.getProductsByFilter(category);
+        return ResponseEntity.ok(products);
+    }
+
     @GetMapping("/get-by-id/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
         Product product = productApplicationService.getProductById(id);

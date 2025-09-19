@@ -1,6 +1,6 @@
 package com.ecommerce.deliveryservice.api;
 
-import com.ecommerce.deliveryservice.application.DeliveryApplicationService;
+import com.ecommerce.deliveryservice.application.service.DeliveryApplicationService;
 import com.ecommerce.deliveryservice.domain.aggregate.Delivery;
 import org.springframework.core.env.Environment;
 import org.springframework.http.ResponseEntity;
